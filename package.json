@@ -1,0 +1,26 @@
+{
+	"name": "televic-confidea",
+	"version": "0.1.0",
+	"api_version": "1.0.3",
+	"keywords": [
+	  "Hardware",
+	  "Conference microphone"
+	],
+	"manufacturer": "Televic",
+	"product": "Confidea Wireless G3",
+	"shortname": "Confidea",
+	"description": "Control of Confidea wireless conference microphone system",
+	"main": "index.js",
+	"scripts": {
+	  "test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"author": "Huw huwenator@gmail.com",
+	"contributors": [
+	  
+	],
+	"license": "MIT",
+	"dependencies": {
+	  "lodash": "^4.17.19",
+	  "xml2js": "^0.4.22"
+	}
+  }
