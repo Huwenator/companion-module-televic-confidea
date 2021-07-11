@@ -9,9 +9,13 @@ function instance(system, id, config) {
     // super-constructor
     instance_skel.apply(this, arguments);
  
+	const MAX_MIX = 40;
+	var mic_state = new Array(MAX_MIX).fill(0);
+
     self.actions(); // export actions
 	self.init_presets(); // button presets
 	self.setFeedbackDefinitions(feedbacks);
+	//self.init_udp();
 
     return self;
 }
@@ -23,20 +27,22 @@ instance.prototype.updateConfig = function(config) {
  	self.actions();
 	self.init_presets();
 	self.setFeedbackDefinitions(feedbacks);
+	//self.init_udp();
 }
- 
+
 instance.prototype.init = function() {
     var self = this;
  
     self.status(self.STATE_OK);
 	self.init_presets();
-	//self.setFeedbackDefinitions(feedbacks);
-	self.init_feedbacks()
+	self.setFeedbackDefinitions(feedbacks);
+	self.init_feedbacks();
+	self.init_udp();
 
     debug = self.debug;
     log = self.log;
 }
- 
+
 // Button presets
 instance.prototype.init_presets = function () {
 	var self = this;
@@ -555,57 +561,6 @@ instance.prototype.init_presets = function () {
 			label: 'Microphone',
 			bank: {
 				style: 'text',
-				text: '1',
-				size: 'auto',
-				color: '16777215',
-				latch: true,
-				bgcolor: self.rgb(0,0,0)
-				
-			},
-			actions: [
-				{
-				action: 'post',
-				options: {
-					mic: '1',
-					action: '1',
-				}
-				}, 
-			],
-			release_actions: [
-				{
-				action: 'post',
-				options: {
-					mic: '1',
-					action: '0'
-				}
-				},
-			],
-			feedbacks: [
-				{
-					type: 'mic_on',
-					options: {
-						mic: '1',
-					},
-					style: {
-						bgcolor: self.rgb(255, 0, 0),
-						color: self.rgb(255, 255, 255),
-					},
-				},{
-					type: 'mic_req',
-					options: {
-						mic: '1',
-					},
-					style: {
-						bgcolor: self.rgb(255, 80, 0),
-						color: self.rgb(255, 255, 255),
-					},
-				},
-			]},
-		{
-			category: 'Microphones',
-			label: 'Microphone',
-			bank: {
-				style: 'text',
 				text: '11',
 				size: 'auto',
 				color: '16777215',
@@ -778,13 +733,13 @@ instance.prototype.actions = function(system) {
                         { id: '0', label: 'Off' },
                         { id: '1', label: 'On' },
                         { id: '2', label: 'Request' }
-                      ],
-                },
+                	]
+                }
             ]
         },
         'allmicsoff': {
             label: 'All Microphones Off',
-        },
+        }
     });
 
 }
@@ -823,11 +778,9 @@ instance.prototype.action = function(action) {
 
 	if (action.action == 'allmicsoff') {
 		var body;
-		var count = 0;  // TODO add var array containing mics with on state
 
 		// sends off command to mics up to 40
-		while (count < 40) { 
-			count++;
+		for (var count = 1; count <= 40; count++) {
 			cmd = 'http://' + self.config.prefix + '/php/func.php?function=SetMicState&channel=' + count + '&state=0';
 
 			self.system.emit('rest', cmd, body, function (err, result) {
@@ -843,7 +796,7 @@ instance.prototype.action = function(action) {
 	}
 }
 
-// Feedback section
+// Feedback from UDP section
 // this would be a UDP message on port 8000 from the camera control of the G3
 // you would need to set the ip of the companion laptop in the mic contoller
 // UDP message will be JSON formated like this {"UID": 7, "status": 1} meaning "Mic 7 is on"
@@ -851,60 +804,47 @@ instance.prototype.action = function(action) {
 
 // I think by adding udp as a var up the top you can query it by udp(self.host, self.port, message)
 
-/*
-instance.prototype.udp = function() {
+
+instance.prototype.init_udp = function() {
 	var self = this;
-	var controller = self.createSocket('udp4');
-	var message = '';
+
+	const dgram = require('dgram');
+	const server = dgram.createSocket('udp4');
+
+//	// Check for existing connection and delete if there is one
+//	if (server !== undefined) {
+//		server.destroy();
+//		delete client
+//	}
 	
-	// Check for existing connection and delete if there is one
-	if (self.controller !== undefined) {
-		controller.destroy()
-		delete client
-	}
-	
-	// Listen for UDP message
-	self.controller.on('listening', function (message) {
-		// log message
-		console.log('Listening for UDP on ' + self.prefix + ":" + self.port);
+	// If there is a error with the connection log message
+	server.on('error', (err) => {
+	   console.log(`server error:\n${err.stack}`);
+	   server.close();
 	});
 	
-	// Messsage recieved
-	self.controller.on('message', function () {
-		// log message
-		self.message = JSON.parse(message)
-		console.log('Message from ' + self.prefix + ':' + self.port +' - ' + message);
+	// Receive messesge
+	server.on('message', (msg, rinfo) => {
+	   console.log(`G3 udp server sent message: ${msg} from ${rinfo.address}:${rinfo.port}`);
+	   
+	   // Here you will need to parse the msg.
+	   if (server.msg !== undefined) {
+			var udpmessage = JSON.parse(server.msg);
+			self.mic_state[udpmessage.UID] = udpmessage.status;
+			self.checkFeedbacks('mic_on');
+			self.checkFeedbacks('mic_req');
+		};
 	});
 	
-	//
-	// Need to parce message and get MIC# and STATE#
+	server.on('listening', (rinfo) => {
+	   // This event is just so you know the thing started to work.
+	   // var address = server.address();
+	   console.log(`G3 upd server listening`);
+	});
 	
-	//
-	
-	// Sort message 
-	switch (self.controller.message) {
-		
-		case 0:
-			self.feedback.type = 'mic_off'
-			self.log('Mic off')
-		break
-		
-		case 1:
-			self.feedback.type = 'mic_on'
-			self.log('Mic on')
-		break
-			
-		case 2:
-			self.feedback.type = 'mic_req'
-			self.log('Mic request')
-		break
-		
-		default:
-			self.log('Valid UPD message not recieved from ' + self.prefix)
-		
-	}
+	// Bind to port 8000.
+	server.bind(8000);
 }
-*/
 
 // Define the feedback types and style
 instance.prototype.init_feedbacks = function () {
@@ -912,82 +852,70 @@ instance.prototype.init_feedbacks = function () {
 	var feedbacks = {}
 
 	feedbacks['mic_on'] = {
+		type: 'boolean',
 		label: 'Change bg when mic on',
 		description: 'If the microphone specified is on, change colors of the button',
-		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255)
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(255, 0, 0)
-			},
-			{
-				type: 'number',
-				label: 'Mic number',
-				id: 'mic',
-				min: 1,
-				max: 40,
-				range: false,
-				default: ''
-			}
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(255, 0, 0)
+				},
 
-		]
+		options: [{
+			type: 'number',
+			label: 'Mic number',
+			id: 'mic',
+			min: 1,
+			max: self.MAX_MIX,
+			range: false,
+			default: ''
+		}],
 	}
 
 	feedbacks['mic_req'] = {
+		type: 'boolean',
 		label: 'Change bg when mic in request',
 		description: 'If the microphone specified is in request, change colors of the button',
-		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255)
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(255, 180, 0),
 			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(255, 180, 0)
-			},
-			{
-				type: 'number',
-				label: 'Mic number',
-				id: 'mic',
-				min: 1,
-				max: 40,
-				range: false,
-				default: ''
-			}
-		]
+
+		options: [{
+			type: 'number',
+			label: 'Mic number',
+			id: 'mic',
+			min: 1,
+			max: self.MAX_MIX,
+			range: false,
+			default: ''
+		}]
 	}
 
 	self.setFeedbackDefinitions(feedbacks)
 }
 
 // Apply the feedback styles
-instance.prototype.feedback = function(feedback, bank) {	
+instance.prototype.feedback = function(event, bank) {	
 	var self = this;
-		
-	if (feedback.type === 'mic_on') {
-		// may need to change self.states once UDP is working
-		if (self.states['mic_on'] === parseInt(feedback.options.mic)) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
-		}
+	
+	if (event.feedback == 'mic_on') {
+		return (self.mic_state[event.options.mic] == 1);
+	}
+	else if (event.feedback == 'mic_req') {
+		return (self.mic_state[event.options.mic] == 2);
 	}
 
-	if (feedback.type === 'mic_req') {
-		// may need to change self.states once UDP is working
-		if (self.states['mic_req'] === parseInt(feedback.options.mic)) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
-		}
-	}
+//	if (udpmessage.uid === feedbacks.mic && feedbacks.type === 'mic_on') {
+//		if (self.states['mic_on'] === parseInt(feedback.options.mic)) {
+//			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
+//		}
+//	}
+//
+//	if (udpmessage.uid === 'mic_req' && feedbacks.type === 'mic-req') {
+//		if (self.states['mic_req'] === parseInt(feedback.options.mic)) {
+//			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+//		}
+//	}
 
 	return {}
 }
