@@ -1,6 +1,5 @@
 
 var instance_skel = require('../../instance_skel');
-//var udp = require('../../udp');
 var debug;
 //var log;
 
@@ -9,8 +8,8 @@ function instance(system, id, config) {
     // super-constructor
     instance_skel.apply(this, arguments);
  
-	const MAX_MIX = 40;
-	var mic_state = new Array(MAX_MIX).fill(0);
+	const MAX_MIC = 40;
+//	var mic_state = new Array(MAX_MIC).fill(0);
 
     self.actions(); // export actions
 	self.init_presets(); // button presets
@@ -93,7 +92,7 @@ instance.prototype.init_presets = function () {
 						mic: '1',
 					},
 					style: {
-						bgcolor: self.rgb(255, 80, 0),
+						bgcolor: self.rgb(255, 255, 0),
 						color: self.rgb(255, 255, 255),
 					},
 				},
@@ -144,7 +143,7 @@ instance.prototype.init_presets = function () {
 					mic: '2',
 				},
 				style: {
-					bgcolor: self.rgb(255, 80, 0),
+					bgcolor: self.rgb(255, 255, 0),
 					color: self.rgb(255, 255, 255),
 				},
 			},
@@ -195,7 +194,7 @@ instance.prototype.init_presets = function () {
 						mic: '3',
 					},
 					style: {
-						bgcolor: self.rgb(255, 80, 0),
+						bgcolor: self.rgb(255, 255, 0),
 						color: self.rgb(255, 255, 255),
 					},
 				},
@@ -246,7 +245,7 @@ instance.prototype.init_presets = function () {
 						mic: '4',
 					},
 					style: {
-						bgcolor: self.rgb(255, 80, 0),
+						bgcolor: self.rgb(255, 255, 0),
 						color: self.rgb(255, 255, 255),
 					},
 				},
@@ -296,7 +295,7 @@ instance.prototype.init_presets = function () {
 						mic: '5',
 					},
 					style: {
-						bgcolor: self.rgb(255, 80, 0),
+						bgcolor: self.rgb(255, 255, 0),
 						color: self.rgb(255, 255, 255),
 					},
 				},
@@ -347,7 +346,7 @@ instance.prototype.init_presets = function () {
 						mic: '6',
 					},
 					style: {
-						bgcolor: self.rgb(255, 80, 0),
+						bgcolor: self.rgb(255, 255, 0),
 						color: self.rgb(255, 255, 255),
 					},
 				},
@@ -398,7 +397,7 @@ instance.prototype.init_presets = function () {
 						mic: '7',
 					},
 					style: {
-						bgcolor: self.rgb(255, 80, 0),
+						bgcolor: self.rgb(255, 255, 0),
 						color: self.rgb(255, 255, 255),
 					},
 				},
@@ -449,7 +448,7 @@ instance.prototype.init_presets = function () {
 						mic: '8',
 					},
 					style: {
-						bgcolor: self.rgb(255, 80, 0),
+						bgcolor: self.rgb(255, 255, 0),
 						color: self.rgb(255, 255, 255),
 					},
 				},
@@ -500,7 +499,7 @@ instance.prototype.init_presets = function () {
 						mic: '9',
 					},
 					style: {
-						bgcolor: self.rgb(255, 80, 0),
+						bgcolor: self.rgb(255, 255, 0),
 						color: self.rgb(255, 255, 255),
 					},
 				},
@@ -551,7 +550,7 @@ instance.prototype.init_presets = function () {
 						mic: '10',
 					},
 					style: {
-						bgcolor: self.rgb(255, 80, 0),
+						bgcolor: self.rgb(255, 255, 0),
 						color: self.rgb(255, 255, 255),
 					},
 				},
@@ -602,7 +601,7 @@ instance.prototype.init_presets = function () {
 						mic: '11',
 					},
 					style: {
-						bgcolor: self.rgb(255, 80, 0),
+						bgcolor: self.rgb(255, 255, 0),
 						color: self.rgb(255, 255, 255),
 					},
 				},
@@ -653,7 +652,7 @@ instance.prototype.init_presets = function () {
 						mic: '12',
 					},
 					style: {
-						bgcolor: self.rgb(255, 80, 0),
+						bgcolor: self.rgb(255, 255, 0),
 						color: self.rgb(255, 255, 255),
 					},
 				},
@@ -807,6 +806,7 @@ instance.prototype.action = function(action) {
 
 instance.prototype.init_udp = function() {
 	var self = this;
+	var mic_state = new Array(40).fill(0);
 
 	const dgram = require('dgram');
 	const server = dgram.createSocket('udp4');
@@ -827,12 +827,29 @@ instance.prototype.init_udp = function() {
 	server.on('message', (msg, rinfo) => {
 	   console.log(`G3 udp server sent message: ${msg} from ${rinfo.address}:${rinfo.port}`);
 	   
-	   // Here you will need to parse the msg.
-	   if (server.msg !== undefined) {
-			var udpmessage = JSON.parse(server.msg);
-			self.mic_state[udpmessage.UID] = udpmessage.status;
-			self.checkFeedbacks('mic_on');
-			self.checkFeedbacks('mic_req');
+	   // Message is parsed to an array and mic_state is updated.
+	   if (msg !== undefined) {
+			var udpmessage = JSON.parse(msg);
+
+            mic_state[udpmessage.uid] = udpmessage.status;
+            console.log('Mic ' + udpmessage.uid + ' changed to ' + udpmessage.status);
+            console.log('Mic status ' + mic_state);
+            // ----
+            // Okay, so when I run it.  All loads okay.  I press the button on the mic and I get the two log's above
+            // telling me that message received, it parces correctly and then the mic_state array show's me that 
+            // position 1 = 1  when the mic is on and 1 = 0 when the mic is off.
+            // Annnd thats it.  Logs further button pushes but doesn't seem to check feedbacks 
+            // 
+            // I added the two vars to the check thinking it was a way to pass mic id and mic state to the 
+            // the feedbacks.
+            //  Now I'm stuck.
+            //----
+
+           // if (udpmessage.status = 1){
+                self.checkFeedbacks(udpmessage.uid, udpmessage.status);
+           // } else if (udpmessage.status = 2){
+           //     self.checkFeedbacks(udpmessage.uid, udpmessage.status);
+           // };
 		};
 	});
 	
@@ -865,10 +882,21 @@ instance.prototype.init_feedbacks = function () {
 			label: 'Mic number',
 			id: 'mic',
 			min: 1,
-			max: self.MAX_MIX,
+			max: self.MAX_MIC,
 			range: false,
 			default: ''
 		}],
+        callback: function (mic, state) {
+            console.log('Made it to the feedback - mic on');
+            // This callback will be called whenever companion wants to check if this feedback 
+            // is 'active' and should affect the button style
+            if (state == '1' && mic == options.mic) {
+                return true
+            } else {
+                return false
+            }
+        }
+
 	}
 
 	feedbacks['mic_req'] = {
@@ -877,7 +905,7 @@ instance.prototype.init_feedbacks = function () {
 		description: 'If the microphone specified is in request, change colors of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(255, 180, 0),
+			bgcolor: self.rgb(255, 255, 0),
 			},
 
 		options: [{
@@ -885,24 +913,37 @@ instance.prototype.init_feedbacks = function () {
 			label: 'Mic number',
 			id: 'mic',
 			min: 1,
-			max: self.MAX_MIX,
+			max: self.MAX_MIC,
 			range: false,
 			default: ''
-		}]
-	}
+		}],
+        callback: function (mic, state) {
+            console.log('Made it to the feedback - mic req');
+            // This callback will be called whenever companion wants to check if this feedback
+            // is 'active' and should affect the button style
+            if (state == '2' && mic  == options.mic) {
+                return true
+            } else {
+                return false
+            }
+        }
 
+	}
+    console.log('Made it to the end of the feedbacks');
 	self.setFeedbackDefinitions(feedbacks)
 }
-
-// Apply the feedback styles
-instance.prototype.feedback = function(event, bank) {	
+/*
+// Apply the feedback styles  *** moved this up to FEEDBACKS - callback
+instance.prototype.feedback = function(feedback, bank) {	
 	var self = this;
 	
-	if (event.feedback == 'mic_on') {
-		return (self.mic_state[event.options.mic] == 1);
+	if (feedback == 'mic_on') {
+        if (self.feedback.options.mic == 1)
+		return true;
 	}
-	else if (event.feedback == 'mic_req') {
-		return (self.mic_state[event.options.mic] == 2);
+	else if (self.feedback.type == 'mic_req') {
+        if (self.feedback.options.mic == 1)
+		return true;
 	}
 
 //	if (udpmessage.uid === feedbacks.mic && feedbacks.type === 'mic_on') {
@@ -919,6 +960,7 @@ instance.prototype.feedback = function(event, bank) {
 
 	return {}
 }
+*/
 
 instance_skel.extendedBy(instance)
 exports = module.exports = instance
