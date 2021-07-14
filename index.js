@@ -886,7 +886,7 @@ instance.prototype.init_Feedbacks = function () {
 		}],
         callback: function (feedback) {
             console.log('Testing if Mic On ' + options.mic);
-            if (self.mic_uid == options.mic){
+            if (mic_state[options.mic] == 1){
                 return true
             }
             return false    
@@ -910,7 +910,7 @@ instance.prototype.init_Feedbacks = function () {
 		}],
         callback: function (feedback) {
             console.log('Testing if Mic Req ' + options.mic);
-            if (self.mic_state[options.mic] == 2) {
+            if (mic_state[options.mic] == 2) {
                 return true
             }
             return false
