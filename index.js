@@ -185,7 +185,7 @@ instance.prototype.action = function(action) {
 instance.prototype.init_udp = function() {
 	var self = this;
 //	var mic_state = new Array(40).fill(0);
-	var mic_state = new Array();
+//	var mic_state = new Array();
     var mic_uid;
 
 	const dgram = require('dgram');
