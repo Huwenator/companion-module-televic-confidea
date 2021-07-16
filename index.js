@@ -5,16 +5,16 @@ var log;
 
 function instance(system, id, config) {
     var self = this;
+	self.mic_state = new Array();
+
     // super-constructor
     instance_skel.apply(this, arguments);
  
-	// Mic_state is never read
-	var mic_state = new Array();
-
     self.actions(); // export actions
+	self.init_Feedbacks();
+
 	//self.init_presets(); // button presets
 	//self.setFeedbackDefinitions(feedbacks);
-
 	//self.init_udp();
 
     return self;
@@ -25,9 +25,9 @@ instance.prototype.updateConfig = function(config) {
  
     self.config = config;
  	self.actions();
+
 	//self.init_presets();
 	//self.setFeedbackDefinitions(feedbacks);
-
 	//self.init_udp();
 }
 
@@ -37,7 +37,7 @@ instance.prototype.init = function() {
     self.status(self.STATE_OK);
 	//self.init_presets();
 	//self.setFeedbackDefinitions(feedbacks);
-	self.init_Feedbacks();
+	//self.init_Feedbacks();
 	self.init_udp();
 
     debug = self.debug;
@@ -156,7 +156,7 @@ instance.prototype.action = function(action) {
 	if (action.action == 'allmicsoff') {
 		var body;
 
-		// sends off command to mics up to 40
+		// sends off command to mics up to 40.  need to set this to max position in self.mic_state
 		for (var count = 1; count <= 40; count++) {
 			cmd = 'http://' + self.config.prefix + '/php/func.php?function=SetMicState&channel=' + count + '&state=0';
 
@@ -211,7 +211,6 @@ instance.prototype.init_udp = function() {
 	   if (msg !== undefined) {
 			var udpmessage = JSON.parse(msg);
 
-			// self.mic_state is undeclared here
             self.mic_state[udpmessage.uid] = udpmessage.status;
             mic_uid = udpmessage.uid;
             console.log('Mic ' + udpmessage.uid + ' changed to ' + udpmessage.status);
