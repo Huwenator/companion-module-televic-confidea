@@ -156,6 +156,24 @@ instance.prototype.action = function(action) {
 	if (action.action == 'allmicsoff') {
 		var body;
 
+		/*
+		self.mic_state.filter(item => item.state = 1)
+			.foreach(item => {
+			cmd = 'http://' + self.config.prefix + '/php/func.php?function=SetMicState&channel=' + item + '&state=0';
+
+			self.system.emit('rest', cmd, body, function (err, result) {
+				if (err !== null) {
+					self.log('error', 'HTTP POST Request failed (' + result.error.code + ')');
+					self.status(self.STATUS_ERROR, result.error.code);
+				}
+				else {
+					self.mic_state(item, 0);
+					self.status(self.STATUS_OK);
+				}
+			});	
+		})
+		*/
+
 		// sends off command to mics up to 40.  need to set this to max position in self.mic_state
 		for (var count = 1; count <= 40; count++) {
 			cmd = 'http://' + self.config.prefix + '/php/func.php?function=SetMicState&channel=' + count + '&state=0';
