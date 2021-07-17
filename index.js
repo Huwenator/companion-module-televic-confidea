@@ -195,7 +195,7 @@ instance.prototype.action = function(action) {
 // this would be a UDP message on port 8000 from the camera control of the G3
 // you would need to set the ip of the companion laptop in the mic contoller
 // UDP message will be JSON formated like this {"UID": 7, "status": 1} meaning "Mic 7 is on"
-// status options are - 0=off, 1=on 2=request
+// status options are - 0=off, 1=on 2=request 3=prior
 
 // I think by adding udp as a var up the top you can query it by udp(self.host, self.port, message)
 
@@ -244,6 +244,7 @@ instance.prototype.init_udp = function() {
 
             self.checkFeedbacks('mic_on');
             self.checkFeedbacks('mic_req');
+            self.checkFeedbacks('mic_prior');
            // };
 		};
 	});
@@ -279,10 +280,12 @@ instance.prototype.init_Feedbacks = function () {
 			default: 1,
 		}],
         callback: function (feedback) {
-            console.log('Testing if Mic On ' + options.mic);
-            if (mic_state[options.mic] == 1){
+            console.log(`Testing if Mic On ${options.mic}`);
+            if (self.mic_state[options.mic] == 1){
+				console.log(`Mic is On`);
                 return true
             }
+			console.log('Mic is off');
             return false    
         }
 	}
@@ -303,14 +306,38 @@ instance.prototype.init_Feedbacks = function () {
 			default: 1
 		}],
         callback: function (feedback) {
-            console.log('Testing if Mic Req ' + options.mic);
-            if (mic_state[options.mic] == 2) {
+            console.log(`Testing if Mic is request ${options.mic}`);
+            if (self.mic_state[options.mic] == 2) {
                 return true
             }
             return false
         }
 	}
-    
+
+	feedbacks['mic_prior'] = {
+		type: 'boolean',
+		label: 'Mic in request',
+		description: 'If the microphone specified has priority, change colors of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(000, 000, 255),
+			},
+
+		options: [{
+			type: 'number',
+			label: 'Mic number',
+			id: 'mic',
+			default: 1
+		}],
+        callback: function (feedback) {
+            console.log(`Testing if Mic has priority ${options.mic}`);
+            if (self.mic_state[options.mic] == 3) {
+                return true
+            }
+            return false
+        }
+	}
+
 	self.setFeedbackDefinitions(feedbacks)
 }
 
