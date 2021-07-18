@@ -6,7 +6,7 @@ var log;
 function instance(system, id, config) {
     var self = this;
 	self.mic_state = new Array();
-	self.mic_uid = new Array();
+	self.mic_uid;
 
     // super-constructor
     instance_skel.apply(this, arguments);
@@ -28,7 +28,7 @@ instance.prototype.updateConfig = function(config) {
 instance.prototype.init = function() {
     var self = this;
  
-    self.status(self.STATE_OK);
+	self.status(self.STATE_OK);
 	self.init_udp();
 
     debug = self.debug;
@@ -107,7 +107,6 @@ instance.prototype.actions = function(system) {
     });
 }
 
-
 instance.prototype.action = function(action) {
     var self = this;
     var cmd;
@@ -170,7 +169,6 @@ instance.prototype.action = function(action) {
 
 instance.prototype.init_udp = function() {
 	var self = this;
-    var mic_uid;
 
 	const dgram = require('dgram');
 	const server = dgram.createSocket('udp4');
@@ -193,16 +191,16 @@ instance.prototype.init_udp = function() {
 	   
 	   // Message is parsed to an array and mic_state is updated.
 	   if (msg !== undefined) {
-			var udpmessage = JSON.parse(msg);
+			var udpmessage = JSON.parse(msg)
 
-            self.mic_state[udpmessage.uid] = udpmessage.status;
-            self.mic_uid[udpmessage.uid] = udpmessage.uid;
-            console.log(`Mic ${udpmessage.uid} changed to ${udpmessage.status}`);
-            console.log(`Mic status array ${self.mic_state}`);
+        	self.mic_state[udpmessage.uid] = udpmessage.status
+        	self.mic_uid = udpmessage.uid
+        	console.log(`Mic ${self.mic_uid} changed to ${self.mic_state[udpmessage.uid]}`)
+        	console.log(`Mic status array ${self.mic_state}`)
 
-			self.checkFeedbacks('mic_on');
-			self.checkFeedbacks('mic_req');
-			self.checkFeedbacks('mic_prior');
+			self.checkFeedbacks('mic_on')
+			self.checkFeedbacks('mic_req')
+			self.checkFeedbacks('mic_prior')
 		};
 	});
 	
@@ -236,15 +234,15 @@ instance.prototype.init_Feedbacks = function () {
 			default: 1,
 		}],
         callback: function (feedback, bank) {
-            console.log(`Testing if Mic On ${feedback.options.mic}`);
-            if (self.mic_uid[feedback.options.mic] == feedback.options.mic && self.mic_state[feedback.options.mic] == 1){
+            console.log(`Testing if Mic ${feedback.options.mic} is on`);
+            if (self.mic_uid == feedback.options.mic && self.mic_state[feedback.options.mic] == 1){
 				console.log(`Mic is On`);
                 return true
             }
 			console.log('Mic is off');
             return false    
-        }
-	}
+        },
+	},
 
 	feedbacks['mic_req'] = {
 		type: 'boolean',
@@ -262,13 +260,15 @@ instance.prototype.init_Feedbacks = function () {
 			default: 1
 		}],
         callback: function (feedback, bank) {
-            console.log(`Testing if Mic is request ${options.mic}`);
-            if (self.mic_uid[feedback.options.mic] == feedback.options.mic && self.mic_state[feedback.options.mic] == 2){
-                return true
+            console.log(`Testing if Mic ${feedback.options.mic} is requesting`);
+            if (self.mic_uid == feedback.options.mic && self.mic_state[feedback.options.mic] == 2){
+				console.log(`Mic is requesting`);
+				return true
             }
+			console.log('Mic is not requesting')
             return false
-        }
-	}
+        },
+	},
 
 	feedbacks['mic_prior'] = {
 		type: 'boolean',
@@ -286,13 +286,15 @@ instance.prototype.init_Feedbacks = function () {
 			default: 1
 		}],
         callback: function (feedback, bank) {
-            console.log(`Testing if Mic has priority ${options.mic}`);
-            if (self.mic_uid[feedback.options.mic] == feedback.options.mic && self.mic_state[feedback.options.mic] == 3){
-                return true
+            console.log(`Testing if Mic ${feedback.options.mic} has priority`);
+            if (self.mic_uid == feedback.options.mic && self.mic_state[feedback.options.mic] == 3){
+				console.log(`Mic has priority`);
+				return true
             }
+			console.log('Mic does not have priority')
             return false
-        }
-	}
+        },
+	},
 
 	self.setFeedbackDefinitions(feedbacks)
 }
