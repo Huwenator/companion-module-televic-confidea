@@ -9,7 +9,7 @@
 	"manufacturer": "Televic",
 	"product": "Confidea Wireless G3",
 	"shortname": "Confidea",
-	"description": "Control of Confidea wireless conference microphone system",
+	"description": "Control of Confidea G3 wireless conference microphone system",
 	"main": "index.js",
 	"scripts": {
 	  "test": "echo \"Error: no test specified\" && exit 1"
