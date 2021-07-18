@@ -6,16 +6,13 @@ var log;
 function instance(system, id, config) {
     var self = this;
 	self.mic_state = new Array();
+	self.mic_uid = new Array();
 
     // super-constructor
     instance_skel.apply(this, arguments);
  
     self.actions(); // export actions
 	self.init_Feedbacks();
-
-	//self.init_presets(); // button presets
-	//self.setFeedbackDefinitions(feedbacks);
-	//self.init_udp();
 
     return self;
 }
@@ -26,18 +23,12 @@ instance.prototype.updateConfig = function(config) {
     self.config = config;
  	self.actions();
 
-	//self.init_presets();
-	//self.setFeedbackDefinitions(feedbacks);
-	//self.init_udp();
 }
 
 instance.prototype.init = function() {
     var self = this;
  
     self.status(self.STATE_OK);
-	//self.init_presets();
-	//self.setFeedbackDefinitions(feedbacks);
-	//self.init_Feedbacks();
 	self.init_udp();
 
     debug = self.debug;
@@ -80,11 +71,7 @@ instance.prototype.destroy = function() {
 
 	// Do I need to destroy the UDP listen?
 }
- 
-// ToDo Create variable for button lable to match mic number
-//  self.setVariable('micnumber', actions.options.mic);
-// I'm not sure how to do this
- 
+  
 instance.prototype.actions = function(system) {
     var self = this;
  
@@ -120,16 +107,6 @@ instance.prototype.actions = function(system) {
     });
 }
 
-/*  Not working yet
-instance.prototype.init_variables = function () {
-	self.setVariableDefinitions( [
-		{
-			label: 'Microphone number',
-			name: 'mic_num'
-		},
-	] );
-};
-*/
 
 instance.prototype.action = function(action) {
     var self = this;
@@ -191,19 +168,8 @@ instance.prototype.action = function(action) {
 	}
 }
 
-// Feedback from UDP section
-// this would be a UDP message on port 8000 from the camera control of the G3
-// you would need to set the ip of the companion laptop in the mic contoller
-// UDP message will be JSON formated like this {"UID": 7, "status": 1} meaning "Mic 7 is on"
-// status options are - 0=off, 1=on 2=request 3=prior
-
-// I think by adding udp as a var up the top you can query it by udp(self.host, self.port, message)
-
-
 instance.prototype.init_udp = function() {
 	var self = this;
-//	var mic_state = new Array(40).fill(0);
-//	var mic_state = new Array();
     var mic_uid;
 
 	const dgram = require('dgram');
@@ -230,28 +196,18 @@ instance.prototype.init_udp = function() {
 			var udpmessage = JSON.parse(msg);
 
             self.mic_state[udpmessage.uid] = udpmessage.status;
-            mic_uid = udpmessage.uid;
-            console.log('Mic ' + udpmessage.uid + ' changed to ' + udpmessage.status);
-            console.log('Mic status ' + self.mic_state);
-            // ----
-            // Okay, so when I run it.  All loads okay.  I press the button on the mic and I get the two log's above
-            // telling me that message received, it parces correctly and then the mic_state array show's me that 
-            // position 1 = 1  when the mic is on and 1 = 0 when the mic is off.
-            // Annnd thats it.  Logs further button pushes but doesn't seem to check feedbacks 
-            // 
-            // Now I'm stuck.
-            //----
+            self.mic_uid[udpmessage.uid] = udpmessage.uid;
+            console.log(`Mic ${udpmessage.uid} changed to ${udpmessage.status}`);
+            console.log(`Mic status array ${self.mic_state}`);
 
-            self.checkFeedbacks('mic_on');
-            self.checkFeedbacks('mic_req');
-            self.checkFeedbacks('mic_prior');
-           // };
+			self.checkFeedbacks('mic_on');
+			self.checkFeedbacks('mic_req');
+			self.checkFeedbacks('mic_prior');
 		};
 	});
 	
 	server.on('listening', (rinfo) => {
 	   // This event is just so you know the thing started to work.
-	   // var address = server.address();
 	   console.log(`G3 upd server listening`);
 	});
 	
@@ -279,9 +235,9 @@ instance.prototype.init_Feedbacks = function () {
 			id: 'mic',
 			default: 1,
 		}],
-        callback: function (feedback) {
-            console.log(`Testing if Mic On ${options.mic}`);
-            if (self.mic_state[options.mic] == 1){
+        callback: function (feedback, bank) {
+            console.log(`Testing if Mic On ${feedback.options.mic}`);
+            if (self.mic_uid[feedback.options.mic] == feedback.options.mic && self.mic_state[feedback.options.mic] == 1){
 				console.log(`Mic is On`);
                 return true
             }
@@ -305,9 +261,9 @@ instance.prototype.init_Feedbacks = function () {
 			id: 'mic',
 			default: 1
 		}],
-        callback: function (feedback) {
+        callback: function (feedback, bank) {
             console.log(`Testing if Mic is request ${options.mic}`);
-            if (self.mic_state[options.mic] == 2) {
+            if (self.mic_uid[feedback.options.mic] == feedback.options.mic && self.mic_state[feedback.options.mic] == 2){
                 return true
             }
             return false
@@ -316,11 +272,11 @@ instance.prototype.init_Feedbacks = function () {
 
 	feedbacks['mic_prior'] = {
 		type: 'boolean',
-		label: 'Mic in request',
+		label: 'Mic has priority',
 		description: 'If the microphone specified has priority, change colors of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(000, 000, 255),
+			bgcolor: self.rgb(0, 255, 0),
 			},
 
 		options: [{
@@ -329,9 +285,9 @@ instance.prototype.init_Feedbacks = function () {
 			id: 'mic',
 			default: 1
 		}],
-        callback: function (feedback) {
+        callback: function (feedback, bank) {
             console.log(`Testing if Mic has priority ${options.mic}`);
-            if (self.mic_state[options.mic] == 3) {
+            if (self.mic_uid[feedback.options.mic] == feedback.options.mic && self.mic_state[feedback.options.mic] == 3){
                 return true
             }
             return false
