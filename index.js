@@ -1,5 +1,6 @@
 
 var instance_skel = require('../../instance_skel');
+instance.prototype.init_presets = require('./presets')
 var debug;
 var log;
 
@@ -13,6 +14,7 @@ function instance(system, id, config) {
  
     self.actions(); // export actions
 	self.init_Feedbacks();
+	self.init_presets(); // button presets
 
     return self;
 }
@@ -22,14 +24,15 @@ instance.prototype.updateConfig = function(config) {
  
     self.config = config;
  	self.actions();
-
-}
+	self.init_presets();
+	}
 
 instance.prototype.init = function() {
     var self = this;
  
 	self.status(self.STATE_OK);
 	self.init_udp();
+	self.init_presets();
 
     debug = self.debug;
     log = self.log;
@@ -172,12 +175,6 @@ instance.prototype.init_udp = function() {
 
 	const dgram = require('dgram');
 	const server = dgram.createSocket('udp4');
-
-//	// Check for existing connection and delete if there is one
-//	if (server !== undefined) {
-//		server.destroy();
-//		delete client
-//	}
 	
 	// If there is a error with the connection log message
 	server.on('error', (err) => {
@@ -250,7 +247,7 @@ instance.prototype.init_Feedbacks = function () {
 		description: 'If the microphone specified is in request, change colors of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(255, 180, 0),
+			bgcolor: self.rgb(255, 150, 0),
 			},
 
 		options: [{
@@ -276,7 +273,7 @@ instance.prototype.init_Feedbacks = function () {
 		description: 'If the microphone specified has priority, change colors of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 255, 0),
+			bgcolor: self.rgb(0, 150, 50),
 			},
 
 		options: [{
