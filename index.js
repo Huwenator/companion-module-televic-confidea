@@ -1,8 +1,70 @@
-
+//const upgradeScripts = require('./upgrades')
+//const { config } = require('process');
 var instance_skel = require('../../instance_skel');
-instance.prototype.init_presets = require('./presets')
 var debug;
 var log;
+
+instance.prototype.init_presets = function () {
+  
+var self = this;
+var presets = [];
+
+	for (var i = 1; i < 65; i++) {
+
+		presets.push({
+			category: 'Microphones',
+			label: 'Microphone',
+			bank: {
+				style: 'text',
+				text: `${i}`,
+				size: 'auto',
+				color: '16777215',
+				bgcolor: self.rgb(0,0,0)
+			},
+			actions: [
+				{
+				action: 'press',
+				options: {
+					mic: `${i}`,
+				}
+				}, 
+			],
+			feedbacks: [
+				{
+					type: 'mic_on',
+					options: {
+						mic: `${i}`,
+					},
+					style: {
+						color: self.rgb(255, 255, 255),
+						bgcolor: self.rgb(255, 0, 0),
+					},
+				},{
+					type: 'mic_req',
+					options: {
+						mic: `${i}`,
+					},
+					style: {
+						color: self.rgb(255, 255, 255),
+						bgcolor: self.rgb(255, 150, 0),
+					},
+				},{
+					type: 'mic_prior',
+					options: {
+						mic: `${i}`,
+					},
+					style: {
+						color: self.rgb(255, 255, 255),
+						bgcolor: self.rgb(0, 150, 50),
+					},
+				},
+			],
+		});
+	};
+
+
+self.setPresetDefinitions(presets);
+}
 
 function instance(system, id, config) {
     var self = this;
@@ -37,7 +99,7 @@ instance.prototype.init = function() {
     debug = self.debug;
     log = self.log;
 }
-// Return config fields for instance
+
 instance.prototype.config_fields = function () {
     var self = this;
    
@@ -63,50 +125,40 @@ instance.prototype.config_fields = function () {
             label: 'Listen for UDP on port',
             width: 4,
             default: '8000'
-        }
+        },
     ]
 }
  
-// When module gets deleted
 instance.prototype.destroy = function() {
     var self = this;
     debug("destroy");
 
-	// Do I need to destroy the UDP listen?
+	if (self.server !== undefined) {
+		self.server.close();
+	}
 }
   
 instance.prototype.actions = function(system) {
     var self = this;
  
     self.setActions({
-        'post': {
+
+        'press': {
             label: 'Microphone',
             options: [
                 {
                     type: 'number',
                     label: 'Mic number',
                     id: 'mic',
-                    min: 1,
-                    max: 40,
                     range: false,
                     default: ''
                 },
-                {
-                    type: 'dropdown',
-                    label: 'Action',
-                    id: 'action',
-                    default: '',
-                    choices: [
-                        { id: '0', label: 'Off' },
-                        { id: '1', label: 'On' },
-                        { id: '2', label: 'Request' }
-                	]
-                }
             ]
         },
+		
         'allmicsoff': {
             label: 'All Microphones Off',
-        }
+        },
     });
 }
 
@@ -114,23 +166,42 @@ instance.prototype.action = function(action) {
     var self = this;
     var cmd;
 
-	if (action.action == 'post') {
+	if (action.action == 'press') {
 		var body;
 
-		cmd = `http://${self.config.prefix}/php/func.php?function=SetMicState&channel=${action.options.mic}&state=${action.options.action}`;
+		//console.log(`Mic array = ${self.mic_state}`)
+		//console.log(`Mic action = ${self.mic_state[action.options.mic]}`)
 
-		self.system.emit('rest', cmd, body, function (err, result) {
-			if (err !== null) {
-				self.log('error', `HTTP POST Request failed ('${result.error.code}')`);
-				self.status(self.STATUS_ERROR, result.error.code);
-			}
-			else {
-				self.status(self.STATUS_OK);
-			}
-		});
-		
-	}
+		if (self.mic_state[action.options.mic] == 0 || self.mic_state[action.options.mic] == null) {
 
+			cmd = `http://${self.config.prefix}/php/func.php?function=SetMicState&channel=${action.options.mic}&state=1`;
+
+			self.system.emit('rest', cmd, body, function (err, result) {
+				if (err !== null) {
+					self.log('error', `HTTP POST Request failed ('${result.error.code}')`);
+					self.status(self.STATUS_ERROR, result.error.code);
+				}
+				else {
+					//console.log(`Press turned ${action.options.mic} on`)
+					self.status(self.STATUS_OK);
+				}
+			})
+		} else {
+
+			cmd = `http://${self.config.prefix}/php/func.php?function=SetMicState&channel=${action.options.mic}&state=0`;
+
+			self.system.emit('rest', cmd, body, function (err, result) {
+				if (err !== null) {
+					self.log('error', `HTTP POST Request failed ('${result.error.code}')`);
+					self.status(self.STATUS_ERROR, result.error.code);
+				}
+				else {
+					//console.log(`Press turned ${action.options.mic} off`)
+					self.status(self.STATUS_OK);
+				}
+			});
+		};
+	};
 
 	if (action.action == 'allmicsoff') {
 		var body;
@@ -147,13 +218,13 @@ instance.prototype.action = function(action) {
 						self.status(self.STATUS_ERROR, result.error.code);
 					}
 					else {
-						console.log(`Turned microphone ${micuid} off`);
+						//console.log(`Turned microphone ${micuid} off`); //---
 						arr[micuid] = 0;
 						self.status(self.STATUS_OK);
 					}
 				})
 			}
-		};
+		}
 	}
 }
 
@@ -171,7 +242,7 @@ instance.prototype.init_udp = function() {
 	
 	// Receive messesge
 	server.on('message', (msg, rinfo) => {
-	   console.log(`G3 udp server sent message: ${msg} from ${rinfo.address}:${rinfo.port}`);
+	   //console.log(`G3 udp server sent message: ${msg} from ${rinfo.address}:${rinfo.port}`);
 	   
 	   // Message is parsed to an array and mic_state is updated.
 	   if (msg !== undefined) {
@@ -179,8 +250,8 @@ instance.prototype.init_udp = function() {
 
         	self.mic_state[udpmessage.uid] = udpmessage.status
         	self.mic_uid = udpmessage.uid
-        	console.log(`Mic ${self.mic_uid} changed to ${self.mic_state[udpmessage.uid]}`)
-        	console.log(`Mic status array ${self.mic_state}`)
+        	//console.log(`Mic ${self.mic_uid} changed to ${self.mic_state[udpmessage.uid]}`)
+        	//console.log(`Mic status array ${self.mic_state}`) 
 
 			self.checkFeedbacks('mic_on')
 			self.checkFeedbacks('mic_req')
@@ -221,6 +292,7 @@ instance.prototype.init_Feedbacks = function () {
             console.log(`Testing if Mic ${feedback.options.mic} is on`);
             if (self.mic_state[feedback.options.mic] == 1){
 				console.log(`Mic is On`);
+				//self.system.emit('bank_pressed', thisPage, thisBank, isPressed)
                 return true
             }
 			console.log('Mic is off');
